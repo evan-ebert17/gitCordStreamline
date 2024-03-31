@@ -1,27 +1,17 @@
-const { Octokit } = require("@octokit/core");
+// Require the necessary discord.js classes
+const { Client, Events, GatewayIntentBits } = require('discord.js');
 require('dotenv').config()
 
-// Create an Octokit instance with your GitHub personal access token
-const octokit = new Octokit({
-  auth: process.env.OCTOKIT_AUTH
+// Create a new client instance
+//the guilds intent is neccesary to cache: guilds (servers), channels and roles.
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+
+// When the client is ready, run this code (only once).
+// The distinction between `client: Client<boolean>` and `readyClient: Client<true>` is important for TypeScript developers.
+// It makes some properties non-nullable.
+client.once(Events.ClientReady, readyClient => {
+	console.log(`Ready! Logged in as ${readyClient.user.tag}`);
 });
 
-// This function creates a repo named "Alphabet-Soup"
-async function createRepo() {
-  try {
-    const response = await octokit.request('POST /user/repos', {
-      name: 'Alphabet-Soup',
-      description: 'This is your first repo!',
-      homepage: 'https://github.com',
-      'private': false,
-      is_template: true,
-      headers: {
-        'X-GitHub-Api-Version': '2022-11-28'
-      }
-    });
-
-    console.log(`Repository created: ${response.data.html_url}`);
-  } catch (error) {
-    console.error('Error creating repository:', error.message);
-  };
-}
+// Log in to Discord with your client's token
+client.login(process.env.BOT_TOKEN);

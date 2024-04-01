@@ -4,8 +4,13 @@ const fs = require('node:fs');
 //path
 const path = require('node:path');
 
-const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
+const { Client, Collection, GatewayIntentBits } = require('discord.js');
+
 require('dotenv').config()
+
+// Create a new client instance
+//the guilds intent is neccesary to cache: guilds (servers), channels and roles.
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 //extends the map class and inclused more useful (for discord) functionality.
 client.commands = new Collection();
@@ -26,7 +31,7 @@ for (const folder of commandFolders) {
 
     //this reads as:
 
-    //dynamically set each commands to the clinet.commands Collection.
+    //dynamically set each commands to the client.commands Collection.
     //for each file being loaded:
     //check that it has at least a data and execute property (this helps to prevent errors resulting from loading unfinished commands.)
 	const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
@@ -34,6 +39,7 @@ for (const folder of commandFolders) {
 
 		const filePath = path.join(commandsPath, file);
 		const command = require(filePath);
+
 		// Set a new item in the Collection with the key as the command name and the value as the exported module
 		if ('data' in command && 'execute' in command) {
 			client.commands.set(command.data.name, command);
@@ -43,9 +49,27 @@ for (const folder of commandFolders) {
 	}
 }
 
-// Create a new client instance
-//the guilds intent is neccesary to cache: guilds (servers), channels and roles.
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+//constructs a path to the events directory
+const eventsPath = path.join(__dirname, 'events');
+
+//reads the path to the directory and returns an array of all the files it contains
+//applies a filter on to the files to make sure only the javascript files get read.
+const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
+
+//this is reading through our file array we made above
+for (const file of eventFiles) {
+	const filePath = path.join(eventsPath, file);
+	const event = require(filePath);
+
+	//this is saying if the event has the once tag, execute it client.once.
+	//otherwise...
+	if (event.once) {
+		client.once(event.name, (...args) => event.execute(...args));
+	} else {
+		//take the name of the event, and its arguments and then execute the event
+		client.on(event.name, (...args) => event.execute(...args));
+	}
+}
 
 // Log in to Discord with token
 client.login(process.env.BOT_TOKEN);

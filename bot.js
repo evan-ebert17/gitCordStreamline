@@ -31,6 +31,7 @@ for (const folder of commandFolders) {
     //check that it has at least a data and execute property (this helps to prevent errors resulting from loading unfinished commands.)
 	const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 	for (const file of commandFiles) {
+
 		const filePath = path.join(commandsPath, file);
 		const command = require(filePath);
 		// Set a new item in the Collection with the key as the command name and the value as the exported module
@@ -41,6 +42,39 @@ for (const folder of commandFolders) {
 		}
 	}
 }
+
+//we recieve an interaction for every slash command executed, so we need to make a listener.
+client.on(Events.InteractionCreate, async interaction => {
+
+    //this if statement is just making sure our command IS a slash command
+    if (!interaction.isChatInputCommand()) return;
+
+    //interaction.commandName is stored in the Collection we made with line 11.
+    //so command is just... our command's name we're about to use.
+    const command = interaction.client.commands.get(interaction.commandName);
+
+	if (!command) {
+		console.error(`No command matching ${interaction.commandName} was found.`);
+		return;
+	}
+
+	try {
+
+        //this is where we try and run our command, assuming everything is good
+		await command.execute(interaction);
+	} catch (error) {
+
+        //discord error handling
+		console.error(error);
+		if (interaction.replied || interaction.deferred) {
+			await interaction.followUp({ content: 'There was an error while executing this command!', ephemeral: true });
+		} else {
+			await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+		}
+	}
+
+	//console.log(interaction);
+});
 
 // Create a new client instance
 //the guilds intent is neccesary to cache: guilds (servers), channels and roles.

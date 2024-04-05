@@ -67,14 +67,28 @@ module.exports = {
 
                 const username = interaction.options.getString('username');
 
-                // await interaction.reply(`Username is: ${username}`);
+                const response = await octokit.request(`GET /users/${username}/repos`, {
+                                    username: username,
+                                    headers: {
+                                        'X-Github-Api-Version': '2022-11-28'
+                                    }
+                                })
+                //this is just the num of json objects that get returned from our call.
+                //make this a menu later that when the number of repos goes over 5-10, make another page the user can go to.
 
-                await octokit.request(`GET /users/${username}/repos`, {
-                    //username: username,
-                    headers: {
-                        'X-Github-Api-Version': '2022-11-28'
-                    }
-                })
+                //currently holds 30 repos (me)
+                let numOfRepos = response.data.length;
+
+                let allRepoInfo = [];
+
+                for (i = 0; i < 5; i++) {
+                    let someRepoInfo = 
+                    `Repository Name: ${response.data[i].name}\nURL: ${response.data[i].html_url}\n`
+
+                    allRepoInfo.push(someRepoInfo)
+                }
+
+                await interaction.reply(`${username}'s Repositories: \n` + allRepoInfo.toString())
             }
 
             if (interaction.options.getSubcommand() === 'getspecificrepo') {
@@ -84,12 +98,12 @@ module.exports = {
                 const repoName = interaction.options.getString('repository');
 
                 const response = await octokit.request(`GET /repos/${username}/${repoName}`, {
-                    owner: username,
-                    repo: repoName,
-                    headers: {
-                      'X-GitHub-Api-Version': '2022-11-28'
-                    }
-                  })
+                                    owner: username,
+                                    repo: repoName,
+                                    headers: {
+                                        'X-GitHub-Api-Version': '2022-11-28'
+                                    }
+                                })
 
 
                 const repoInfo = 

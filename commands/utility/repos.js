@@ -107,15 +107,7 @@ module.exports = {
 
 
                 const repoInfo = 
-                `
-                Repository Name: ${response.data.name}
-                Description: ${response.data.description}
-                Language: ${response.data.language}
-                Stars: ${response.data.stargazers_count}
-                Watchers: ${response.data.watchers_count}
-                Forks: ${response.data.forks_count}
-                URL: ${response.data.html_url}
-                `;
+                `Repository Name: ${response.data.name}\nDescription: ${response.data.description}\n\nLanguage: ${response.data.language}\nStars: ${response.data.stargazers_count}\nWatchers: ${response.data.watchers_count}\nForks: ${response.data.forks_count}\nURL: ${response.data.html_url}`;
 
                 await interaction.reply(repoInfo);
 

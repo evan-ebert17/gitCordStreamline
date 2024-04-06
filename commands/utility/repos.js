@@ -96,16 +96,21 @@ module.exports = {
                 //to be pushed to our allRepoInfo array
                 for (let i = 0; i < 10; i++) {
                     //creating a new object each run to 
-                    let someRepoInfo = `Repository Name: ${response.data[i].name}\n Repository Url: ${response.data[i].html_url}\n`
+                    let someRepoInfo = `**Repository Name**: ${response.data[i].name}\n **Repository Url**: ${response.data[i].html_url}\n\n`
 
                     allRepoInfo.push(someRepoInfo)
                 }
 
+                console.log(allRepoInfo.toString())
+
+                const formattedString =  outputFormatter(allRepoInfo.toString());
+
+                console.log(formattedString)
 
                 //this displays those repo names to the caller
                 await interaction.reply({
                    
-                   content: `${username}'s Repositories: \n\t` + allRepoInfo.toString()
+                   content: `${username}'s (public) Repositories: \n\n` + outputFormatter(allRepoInfo.toString())
                 })
 
                 
@@ -131,11 +136,16 @@ module.exports = {
                 //this is just formatted output of:
                 //repo name -> description\n -> language (maybe change this) -> Watchers -> forks -> url
                 const repoInfo = 
-                `Repository Name: ${response.data.name}\nDescription: ${response.data.description}\n\nLanguage: ${response.data.language}\nStars: ${response.data.stargazers_count}\nWatchers: ${response.data.watchers_count}\nForks: ${response.data.forks_count}\nURL: ${response.data.html_url}`;
+                `**Repository Name**: ${response.data.name}\n**Description**: ${response.data.description}\n\n**Language**: ${response.data.language}\n**Stars**: ${response.data.stargazers_count}\n**Watchers**: ${response.data.watchers_count}\n**Forks**: ${response.data.forks_count}\n**URL**: ${response.data.html_url}`;
 
                 await interaction.reply(repoInfo);
 
             }
 
 	},
+};
+
+function outputFormatter(thingToFormat) {
+    const formattedOutput = thingToFormat.replaceAll(',',"")
+    return formattedOutput
 };

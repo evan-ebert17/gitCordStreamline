@@ -6,7 +6,7 @@ const path = require('node:path');
 
 const { Client, Collection, GatewayIntentBits } = require('discord.js');
 
-require('dotenv').config()
+require('dotenv').config();
 
 // Create a new client instance
 //the guilds intent is neccesary to cache: guilds (servers), channels and roles.

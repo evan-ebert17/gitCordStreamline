@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
 //module.exports is what we use in node to export data to be "require()"-d in other files.
 
@@ -64,6 +64,7 @@ module.exports = {
 	    async execute(interaction) {
             //if we have subcommands, we need to set this "CommandInteractionOptionResolver#getSubcommand()" to tell us which subcommand was used.
 		    if (interaction.options.getSubcommand() === 'getallrepos') {
+                // inside a command, event listener, etc.
 
                 const username = interaction.options.getString('username');
 
@@ -73,30 +74,52 @@ module.exports = {
                                         'X-Github-Api-Version': '2022-11-28'
                                     }
                                 })
+
+                //const allRepoEmbed = new EmbedBuilder().setTitle('All Repositories');
+
                 //this is just the num of json objects that get returned from our call.
                 //make this a menu later that when the number of repos goes over 5-10, make another page the user can go to.
 
                 //currently holds 30 repos (me)
                 let numOfRepos = response.data.length;
-
+                
+                //array that will hold all of our repositories to be appended
                 let allRepoInfo = [];
 
-                for (i = 0; i < 5; i++) {
-                    let someRepoInfo = 
-                    `Repository Name: ${response.data[i].name}\nURL: ${response.data[i].html_url}\n`
+                //this is saying (named boolean):
+                    //if we have 5 elements (0,1,2,3,4) or
+                    //we've run out of elements to iterate over
+                    //push that object to the array
+                //const fiveAtATimeOrNoneLeft = (i / 4 == 0 || i == numOfRepos) 
+                
+                //currently set to five, this is just using our response object to get all of the repo names and url's 
+                //to be pushed to our allRepoInfo array
+                for (let i = 0; i < 10; i++) {
+                    //creating a new object each run to 
+                    let someRepoInfo = `Repository Name: ${response.data[i].name}\n Repository Url: ${response.data[i].html_url}\n`
 
                     allRepoInfo.push(someRepoInfo)
                 }
 
-                await interaction.reply(`${username}'s Repositories: \n` + allRepoInfo.toString())
+
+                //this displays those repo names to the caller
+                await interaction.reply({
+                   
+                   content: `${username}'s Repositories: \n\t` + allRepoInfo.toString()
+                })
+
+                
             }
 
+            //if the user calls the "getspecificrepo" subcommand
             if (interaction.options.getSubcommand() === 'getspecificrepo') {
 
+                //these just hold the user entered values
                 const username = interaction.options.getString('username');
 
                 const repoName = interaction.options.getString('repository');
 
+                //this request returns ONE repositiory of the specified user
                 const response = await octokit.request(`GET /repos/${username}/${repoName}`, {
                                     owner: username,
                                     repo: repoName,
@@ -105,7 +128,8 @@ module.exports = {
                                     }
                                 })
 
-
+                //this is just formatted output of:
+                //repo name -> description\n -> language (maybe change this) -> Watchers -> forks -> url
                 const repoInfo = 
                 `Repository Name: ${response.data.name}\nDescription: ${response.data.description}\n\nLanguage: ${response.data.language}\nStars: ${response.data.stargazers_count}\nWatchers: ${response.data.watchers_count}\nForks: ${response.data.forks_count}\nURL: ${response.data.html_url}`;
 

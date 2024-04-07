@@ -166,7 +166,6 @@ module.exports = {
                 //this displays those repo names to the caller
                 const message = await interaction.reply({
                    
-                   //content: `${username}'s (public) Repositories: \n\n` + outputFormatter(allRepoInfo.toString()),
                    //this produces the embed that will hold our information
                    embeds: [allRepoEmbed],
                    //this contains the prev-next buttons.
@@ -177,8 +176,19 @@ module.exports = {
 
                 //the i here is shorthand for interacton, or what will be being clicked in our case.
                 collector.on('collect', async i => {
+
+                    //this is to say "hey, we got an interaction! don't throw an error."
+                    i.deferUpdate();
+
                     if (i.customId === 'next') {
                         currentRepoPage++;
+
+                        //if there are no more items
+                        if(currentRepoPage >= allRepoInfo.length) {
+
+                            //set value equal to last page in event we go too far
+                            currentRepoPage = allRepoInfo.length - 1; 
+                        }
 
                         await message.edit({
                             embeds: [{
@@ -201,7 +211,13 @@ module.exports = {
 
                     } else if (i.customId === 'back') {
                         currentRepoPage--;
-                
+
+                        //if there are no previous items
+                        if(currentRepoPage < 0) {
+
+                            //set value equal to zero in event we go too far
+                            currentRepoPage = 0; 
+                        }
                         await message.edit({
                             embeds: [{
                                 color: 0x547AA4,

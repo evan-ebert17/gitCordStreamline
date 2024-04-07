@@ -134,6 +134,9 @@ module.exports = {
                         icon_url: 'https://i.imgur.com/VvN7PcF.png',
                         url: 'https://github.com/evan-ebert17/gitCordStreamline',
                     },
+                    thumbnail: {
+                        url: `${response.data[0].owner.avatar_url}`,
+                    },
                     //content starts here
 
                     //to update the text content, just increase the index here.
@@ -204,6 +207,9 @@ module.exports = {
                                     icon_url: 'https://i.imgur.com/VvN7PcF.png',
                                     url: 'https://github.com/evan-ebert17/gitCordStreamline',
                                 },
+                                thumbnail: {
+                                    url: `${response.data[0].owner.avatar_url}`,
+                                },
                                 fields: allRepoInfo[currentRepoPage],
                                 timestamp: new Date().toISOString(),
                                 footer: {
@@ -235,7 +241,7 @@ module.exports = {
                                     url: 'https://github.com/evan-ebert17/gitCordStreamline',
                                 },
                                 thumbnail: {
-                                    url: `${response.data.owner.avatar_url}`,
+                                    url: `${response.data[0].owner.avatar_url}`,
                                 },
                                 fields: allRepoInfo[currentRepoPage],
                                 timestamp: new Date().toISOString(),

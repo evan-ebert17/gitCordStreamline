@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ActionRowBuilder } = require('discord.js');
+const { SlashCommandBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ActionRowBuilder, ComponentType } = require('discord.js');
 
 //module.exports is what we use in node to export data to be "require()"-d in other files.
 
@@ -76,21 +76,16 @@ module.exports = {
                                 })
 
                 //this is just the num of json objects that get returned from our call.
-                //make this a menu later that when the number of repos goes over 5-10, make another page the user can go to.
-                //currently holds ~30 repos (me)
                 let numOfRepos = response.data.length;
                 
-                //array that will hold all of our repositories to be appended
+                //array that will hold an array of objects:
+
+                //[allRepoInfo... [container... {...content in groups of 5 } ] ]
+                //this is the structure of allRepoInfo
+
+                let currentRepoPage = 0;
+
                 let allRepoInfo = [];
-
-                let nameUrlObject = {}
-
-                //this is saying (named boolean):
-                //if we have 5 elements (0,1,2,3,4) or
-                //we've run out of elements to iterate over
-                //push that object to the array
-
-                //const fiveAtATimeOrNoneLeft = (i / 5 == 0 || i == numOfRepos) 
 
                 //currently set to 10, this is just using our response object to get all of the repo names and url's 
                 //to be pushed to our allRepoInfo array
@@ -142,8 +137,8 @@ module.exports = {
                     //content starts here
 
                     //to update the text content, just increase the index here.
-                    fields: allRepoInfo[0],
-                    
+                    fields: allRepoInfo[currentRepoPage],
+
                     //content ends here
                     timestamp: new Date().toISOString(),
                     footer: {
@@ -168,11 +163,8 @@ module.exports = {
                 const row = new ActionRowBuilder()
                     .addComponents(backButton, forwardButton)
 
-                //removing the ,'s from our array for printing.
-                const formattedString =  outputFormatter(allRepoInfo.toString());
-
                 //this displays those repo names to the caller
-                await interaction.reply({
+                const message = await interaction.reply({
                    
                    //content: `${username}'s (public) Repositories: \n\n` + outputFormatter(allRepoInfo.toString()),
                    //this produces the embed that will hold our information
@@ -181,7 +173,56 @@ module.exports = {
                    components: [row]
                 })
 
+                const collector = message.createMessageComponentCollector({ componentType: ComponentType.Button, time: 3_600_000 })
+
+                //the i here is shorthand for interacton, or what will be being clicked in our case.
+                collector.on('collect', async i => {
+                    if (i.customId === 'next') {
+                        currentRepoPage++;
+
+                        await message.edit({
+                            embeds: [{
+                                color: 0x547AA4,
+                                title: 'All Repositories',
+                                author: {
+                                    name: 'gitCordStreamline',
+                                    icon_url: 'https://i.imgur.com/VvN7PcF.png',
+                                    url: 'https://github.com/evan-ebert17/gitCordStreamline',
+                                },
+                                fields: allRepoInfo[currentRepoPage],
+                                timestamp: new Date().toISOString(),
+                                footer: {
+                                    text: 'Evan Ebert 2024',
+                                    icon_url: 'https://i.imgur.com/VvN7PcF.png',
+                                }
+                            }],
+                            components: [row]
+                        });
+
+                    } else if (i.customId === 'back') {
+                        currentRepoPage--;
                 
+                        await message.edit({
+                            embeds: [{
+                                color: 0x547AA4,
+                                title: 'All Repositories',
+                                author: {
+                                    name: 'gitCordStreamline',
+                                    icon_url: 'https://i.imgur.com/VvN7PcF.png',
+                                    url: 'https://github.com/evan-ebert17/gitCordStreamline',
+                                },
+                                fields: allRepoInfo[currentRepoPage],
+                                timestamp: new Date().toISOString(),
+                                footer: {
+                                    text: 'Evan Ebert 2024',
+                                    icon_url: 'https://i.imgur.com/VvN7PcF.png',
+                                }
+                            }],
+                            components: [row]
+                        });
+                    }
+                });
+
             }
 
             //if the user calls the "getspecificrepo" subcommand
@@ -211,10 +252,4 @@ module.exports = {
             }
 
 	},
-};
-
-//all this function does is take the ,'s in a formatted string for our array and remove them.
-function outputFormatter(thingToFormat) {
-    const formattedOutput = thingToFormat.replaceAll(',',"")
-    return formattedOutput
 };

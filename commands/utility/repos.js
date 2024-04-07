@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ActionRowBuilder } = require('discord.js');
 
 //module.exports is what we use in node to export data to be "require()"-d in other files.
 
@@ -75,24 +75,22 @@ module.exports = {
                                     }
                                 })
 
-                //const allRepoEmbed = new EmbedBuilder().setTitle('All Repositories');
-
                 //this is just the num of json objects that get returned from our call.
                 //make this a menu later that when the number of repos goes over 5-10, make another page the user can go to.
-
-                //currently holds 30 repos (me)
+                //currently holds ~30 repos (me)
                 let numOfRepos = response.data.length;
                 
                 //array that will hold all of our repositories to be appended
                 let allRepoInfo = [];
 
                 //this is saying (named boolean):
-                    //if we have 5 elements (0,1,2,3,4) or
-                    //we've run out of elements to iterate over
-                    //push that object to the array
+                //if we have 5 elements (0,1,2,3,4) or
+                //we've run out of elements to iterate over
+                //push that object to the array
+
                 //const fiveAtATimeOrNoneLeft = (i / 4 == 0 || i == numOfRepos) 
                 
-                //currently set to five, this is just using our response object to get all of the repo names and url's 
+                //currently set to 10, this is just using our response object to get all of the repo names and url's 
                 //to be pushed to our allRepoInfo array
                 for (let i = 0; i < 10; i++) {
                     //creating a new object each run to 
@@ -101,16 +99,39 @@ module.exports = {
                     allRepoInfo.push(someRepoInfo)
                 }
 
-                console.log(allRepoInfo.toString())
+                //this button just contains "next" for the main embed, so when we click it we get the 5 next items (if there are any) to the embed
+                const forwardButton = new ButtonBuilder()
+                    .setCustomId('next')
+                    .setLabel('Next Page')
+                    .setStyle(ButtonStyle.Primary)
 
+                //this button just contains "back" for the main embed, so when we click it we get the 5 previous items (if there are any) to the embed
+                const backButton = new ButtonBuilder()
+                    .setCustomId('back')
+                    .setLabel('Previous Page')
+                    .setStyle(ButtonStyle.Secondary)
+
+                //constructor for our row, which will contain our prev, next buttons (in that order).
+                const row = new ActionRowBuilder()
+                    .addComponents(backButton, forwardButton)
+
+                
+                //this is the embed where our main content resides.
+                const allRepoEmbed = new EmbedBuilder()
+                    .setTitle('All Repositories')
+                    .setAuthor({ name: 'gitCordStreamline', iconURL: 'https://i.imgur.com/VvN7PcF.png', url: 'https://github.com/evan-ebert17/gitCordStreamline'})
+
+                //removing the ,'s from our array for printing.
                 const formattedString =  outputFormatter(allRepoInfo.toString());
-
-                console.log(formattedString)
 
                 //this displays those repo names to the caller
                 await interaction.reply({
                    
-                   content: `${username}'s (public) Repositories: \n\n` + outputFormatter(allRepoInfo.toString())
+                   //content: `${username}'s (public) Repositories: \n\n` + outputFormatter(allRepoInfo.toString()),
+                   //this produces the embed that will hold our information
+                   embeds: [allRepoEmbed],
+                   //this contains the prev-next buttons.
+                   components: [row]
                 })
 
                 
@@ -145,6 +166,7 @@ module.exports = {
 	},
 };
 
+//all this function does is take the ,'s in a formatted string for our array and remove them.
 function outputFormatter(thingToFormat) {
     const formattedOutput = thingToFormat.replaceAll(',',"")
     return formattedOutput

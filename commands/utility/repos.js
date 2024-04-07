@@ -172,7 +172,7 @@ module.exports = {
                    components: [row]
                 })
 
-                const collector = message.createMessageComponentCollector({ componentType: ComponentType.Button, time: 3_600_000 })
+                const collector = message.createMessageComponentCollector({ componentType: ComponentType.Button, time: 300000 })
 
                 //the i here is shorthand for interacton, or what will be being clicked in our case.
                 collector.on('collect', async i => {

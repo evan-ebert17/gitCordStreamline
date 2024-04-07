@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ActionRowBuilder, ComponentType } = require('discord.js');
+const { SlashCommandBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ActionRowBuilder, ComponentType, StringSelectMenuBuilder } = require('discord.js');
 
 //module.exports is what we use in node to export data to be "require()"-d in other files.
 
@@ -77,6 +77,9 @@ module.exports = {
 
                 //this is just the num of json objects that get returned from our call.
                 let numOfRepos = response.data.length;
+
+                //because we display 5 items per page, to get our number of pages we just take the total number of items and divide it by amount able to be displayed at once.
+                const howManyPages = (numOfRepos / 5);
                 
                 //array that will hold an array of objects:
 
@@ -128,7 +131,7 @@ module.exports = {
 
                 const allRepoEmbed = {
                     color: 0x547AA4, 
-                    title: 'All Repositories',
+                    title: 'All Public Repositories',
                     author: {
                         name: 'gitCordStreamline',
                         icon_url: 'https://i.imgur.com/VvN7PcF.png',
@@ -162,9 +165,16 @@ module.exports = {
                     .setLabel('Previous Page')
                     .setStyle(ButtonStyle.Secondary)
 
+                //this button keeps track of how many pages of information there are.
+                const whatPage =  new ButtonBuilder()
+                    .setCustomId('whatPage')
+                    .setLabel(`1/${howManyPages}`)
+                    .setStyle(ButtonStyle.Secondary)
+                    .setDisabled(true)
+
                 //constructor for our row, which will contain our prev, next buttons (in that order).
                 const row = new ActionRowBuilder()
-                    .addComponents(backButton, forwardButton)
+                    .addComponents(backButton, whatPage, forwardButton)
 
                 //this displays those repo names to the caller
                 const message = await interaction.reply({
@@ -181,6 +191,9 @@ module.exports = {
                 //and accordingly progress or regress the page contents. time is a param here to say "after 5 minutes stop trying to collect interactions".
                 const collector = message.createMessageComponentCollector({ componentType: ComponentType.Button, time: 300000 })
 
+                //keep track of current page, starting at 1.
+                let currentButtonPagesLeft = 1;
+
                 //the i here is shorthand for interacton, or what will be being clicked in our case.
                 collector.on('collect', async i => {
 
@@ -188,6 +201,7 @@ module.exports = {
                     i.deferUpdate();
 
                     if (i.customId === 'next') {
+                        //increment the representation of what repos will populate the papge for the page we're on
                         currentRepoPage++;
 
                         //if there are no more items
@@ -197,11 +211,25 @@ module.exports = {
                             currentRepoPage = allRepoInfo.length - 1; 
                         }
 
+                        //disabledButton representing how many pages we have left
+                        //in this case, we're incrementing
+                        currentButtonPagesLeft++
+
+                        //if we go too far to the right (ran out of pages)
+                        if(currentButtonPagesLeft > howManyPages) {
+                            //set button text to the max # of repos
+                            currentButtonPagesLeft = howManyPages
+                        }
+
+                        //this updates the row with the new button text being increased by 1
+                        const updatedRow = new ActionRowBuilder()
+                            .addComponents(backButton, whatPage.setLabel(`${currentButtonPagesLeft}/${howManyPages}`), forwardButton);
+
                         //we edit the message with the updated currentRepoPage++
                         await message.edit({
                             embeds: [{
                                 color: 0x547AA4,
-                                title: 'All Repositories',
+                                title: 'All Public Repositories',
                                 author: {
                                     name: 'gitCordStreamline',
                                     icon_url: 'https://i.imgur.com/VvN7PcF.png',
@@ -217,7 +245,7 @@ module.exports = {
                                     icon_url: 'https://i.imgur.com/VvN7PcF.png',
                                 }
                             }],
-                            components: [row]
+                            components: [updatedRow]
                         });
 
                     } else if (i.customId === 'back') {
@@ -230,11 +258,25 @@ module.exports = {
                             currentRepoPage = 0; 
                         }
 
+                        //disabledButton representing how many pages we have left
+                        //in this case, we're incrementing
+                        currentButtonPagesLeft--
+
+                        //if we go too far to the left (no previous pages)
+                        if(currentButtonPagesLeft < 1) {
+                            //set button text to the max # of repos
+                            currentButtonPagesLeft = 1
+                        }
+
+                        //this updates the row with the new button text being decreased by 1
+                        const updatedRow = new ActionRowBuilder()
+                            .addComponents(backButton, whatPage.setLabel(`${currentButtonPagesLeft}/${howManyPages}`), forwardButton);
+
                         //we edit the message with the updated currentRepoPage--
                         await message.edit({
                             embeds: [{
                                 color: 0x547AA4,
-                                title: 'All Repositories',
+                                title: 'All Public Repositories',
                                 author: {
                                     name: 'gitCordStreamline',
                                     icon_url: 'https://i.imgur.com/VvN7PcF.png',
@@ -250,7 +292,7 @@ module.exports = {
                                     icon_url: 'https://i.imgur.com/VvN7PcF.png',
                                 }
                             }],
-                            components: [row]
+                            components: [updatedRow]
                         });
                     }
                 });

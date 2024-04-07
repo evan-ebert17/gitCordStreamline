@@ -83,8 +83,6 @@ module.exports = {
                 //[allRepoInfo... [container... {...content in groups of 5 } ] ]
                 //this is the structure of allRepoInfo
 
-                let currentRepoPage = 0;
-
                 let allRepoInfo = [];
 
                 //currently set to 10, this is just using our response object to get all of the repo names and url's 
@@ -122,6 +120,8 @@ module.exports = {
 
                 }
 
+                //this will be used to keep track of what page of repositories we're on.
+                let currentRepoPage = 0;
 
                 //this is the embed where our main content resides.
                 //it is in object format currently.
@@ -172,6 +172,10 @@ module.exports = {
                    components: [row]
                 })
 
+                //a collector is a way for us to collect interactions from the user
+                //used for whenever we have more than 1 interaction we want to keep track of (in this case, pressing prev and back)
+                //we take message, which is our interaction.reply and then we collect every time they press the prev and next button
+                //and accordingly progress or regress the page contents. time is a param here to say "after 5 minutes stop trying to collect interactions".
                 const collector = message.createMessageComponentCollector({ componentType: ComponentType.Button, time: 300000 })
 
                 //the i here is shorthand for interacton, or what will be being clicked in our case.
@@ -190,6 +194,7 @@ module.exports = {
                             currentRepoPage = allRepoInfo.length - 1; 
                         }
 
+                        //we edit the message with the updated currentRepoPage++
                         await message.edit({
                             embeds: [{
                                 color: 0x547AA4,
@@ -218,6 +223,8 @@ module.exports = {
                             //set value equal to zero in event we go too far
                             currentRepoPage = 0; 
                         }
+
+                        //we edit the message with the updated currentRepoPage--
                         await message.edit({
                             embeds: [{
                                 color: 0x547AA4,
@@ -226,6 +233,9 @@ module.exports = {
                                     name: 'gitCordStreamline',
                                     icon_url: 'https://i.imgur.com/VvN7PcF.png',
                                     url: 'https://github.com/evan-ebert17/gitCordStreamline',
+                                },
+                                thumbnail: {
+                                    url: `${response.data.owner.avatar_url}`,
                                 },
                                 fields: allRepoInfo[currentRepoPage],
                                 timestamp: new Date().toISOString(),
@@ -250,7 +260,7 @@ module.exports = {
                 const repoName = interaction.options.getString('repository');
 
                 //this request returns ONE repositiory of the specified user
-                const response = await octokit.request(`GET /repos/${username}/${repoName}`, {
+                const octokitPing = await octokit.request(`GET /repos/${username}/${repoName}`, {
                                     owner: username,
                                     repo: repoName,
                                     headers: {
@@ -258,14 +268,71 @@ module.exports = {
                                     }
                                 })
 
+                if (octokitPing.status === 200) {
+
+                const response = octokitPing
+
                 //this is just formatted output of:
                 //repo name -> description\n -> language (maybe change this) -> Watchers -> forks -> url
-                const repoInfo = 
-                `**Repository Name**: ${response.data.name}\n**Description**: ${response.data.description}\n\n**Language**: ${response.data.language}\n**Stars**: ${response.data.stargazers_count}\n**Watchers**: ${response.data.watchers_count}\n**Forks**: ${response.data.forks_count}\n**URL**: ${response.data.html_url}`;
 
-                await interaction.reply(repoInfo);
+                const allRepoEmbed = {
+                    color: 0x547AA4, 
+                    title: `**${response.data.name}**`,
+                    author: {
+                        name: 'gitCordStreamline',
+                        icon_url: 'https://i.imgur.com/VvN7PcF.png',
+                        url: 'https://github.com/evan-ebert17/gitCordStreamline',
+                    },
+                    thumbnail: {
+                        url: `${response.data.owner.avatar_url}`,
+                    },
 
+                    //content starts here
+                    fields: [
+                        {
+                            name: '**URL**',
+                            value: `${response.data.html_url}`
+                        },
+                        {
+                            name: `**Description**`,
+                            value: (response.data.description === null) ? "No description provided" : `${response.data.description}`
+                        },
+
+                        //blank space
+                        {
+                            name: `\u200b`,
+                            value: `\u200b`
+                        },
+                        {
+                            name: `**Stars**`,
+                            value: `${response.data.stargazers_count}`
+                        },
+                        {
+                            name: `**Issues**`,
+                            value: response.data.has_issues ? `https://github.com/${username}/${repoName}/issues` : "None"
+                        }
+                    ],
+
+                    //content ends here
+                    timestamp: new Date().toISOString(),
+                    footer: {
+                        text: 'Evan Ebert 2024',
+                        icon_url: 'https://i.imgur.com/VvN7PcF.png',
+                    },
+                };
+
+                //const repoInfo = 
+                //`**Repository Name**: ${response.data.name}\n**Description**: ${response.data.description}\n\n**Language**: ${response.data.language}\n**Stars**: ${response.data.stargazers_count}\n**Watchers**: ${response.data.watchers_count}\n**Forks**: ${response.data.forks_count}\n**URL**: ${response.data.html_url}`;
+
+                await interaction.reply({
+                    embeds: [allRepoEmbed]
+                }
+                );
+
+            } else {
+                console.error("Error fetching repository details:", octokitPing.status)
             }
+        }
 
 	},
 };

@@ -69,7 +69,30 @@ module.exports = {
                 .addStringOption(option =>
                     option.setName('commitid')
                         .setDescription('The id of the commit we want.')
+                        .setRequired(true)))
+
+        .addSubcommand(subcommand =>
+            subcommand
+                //gets issue of specific name
+                .setName('gitblame')
+                .setDescription('Gets a specific issue from a specific repository.')
+
+                .addStringOption(option =>
+                    option.setName('username')
+                        .setDescription('The GitHub username of the user whose repository we`re looking at.')
+                        .setRequired(true))
+
+                .addStringOption(option =>
+                    option.setName('repository')
+                        .setDescription('The GitHub repository containing the commit we want.')
+                        .setRequired(true))
+
+                .addStringOption(option =>
+                    option.setName('commitid')
+                        .setDescription('The id of the commit we want.')
                         .setRequired(true))),
+
+
 
     async execute(interaction) {
         //if we have subcommands, we need to set this "CommandInteractionOptionResolver#getSubcommand()" to tell us which subcommand was used.
@@ -114,7 +137,7 @@ module.exports = {
 
                         //get the next 5 elements from our data
                         const commitsSlice = commits.slice(i, i + 5);
-                       
+
 
                         // Map each commit to an object
                         const commitsGroup = commitsSlice.map(commit => {
@@ -248,7 +271,7 @@ module.exports = {
                 i.deferUpdate();
 
                 if (i.customId === 'next') {
-                    //increment the representation of what repos will populate the papge for the page we're on
+                    //increment the representation of what commits will populate the page for the page we're on
                     currentCommitsPage++;
 
                     //if there are no more items
@@ -301,7 +324,7 @@ module.exports = {
                     });
 
                 } else if (i.customId === 'back') {
-                    //increment the representation of what repos will populate the papge for the page we're on
+                    //increment the representation of what commits will populate the page for the page we're on
                     currentCommitsPage--;
 
                     //if there are no more items
@@ -385,7 +408,23 @@ module.exports = {
                 //this is just formatted output of:
                 //repo name -> description\n -> language (maybe change this) -> Watchers -> forks -> url
 
-                console.log(response)
+                //console.log(response.data.files)
+
+                //this array is going to hold all of the issues that we will display
+                let filesData = response.data.files;
+
+                let filesArray = [];
+
+                for (let i = 0; i < filesData.length; i++) {
+                    let strippedFileObject = {
+                        name: `*Changes made to ${filesData[i].filename}*`,
+                        value: `Changes: **` + filesData[i].changes + '**\n' + `Addtions: **` + filesData[i].additions + `, ** Deletions: **` + filesData[i].deletions + `**`
+                    };
+
+                    filesArray.push(strippedFileObject);
+                }
+
+
 
                 const allCommitsEmbed = {
                     color: 0x547AA4,
@@ -409,21 +448,23 @@ module.exports = {
                             name: `**Description**`,
                             value: (response.data.commit.message === null) ? "No message provided" : `${response.data.commit.message}`
                         },
+                        //filesArray content
+                        ...filesArray,
 
                         //blank space
                         {
                             name: `\u200b`,
                             value: `\u200b`
                         },
+
+                        {
+                            name: `**Stats:**`,
+                            value: 'Total: **' + response.data.stats.total + '** Additions: **' + response.data.stats.additions + ', ** Deletions: **' + response.data.stats.deletions + '**'
+                        },
                         {
                             name: `**Commit ID:**`,
                             value: `${response.data.sha}`
                         },
-                        {
-                            name: `**Stats:**`,
-                            value: 'Total: **'+ response.data.stats.total + '** Additions: **'+ response.data.stats.additions + '** Deletions: **'+ response.data.stats.deletions + '**'
-                        }
-
                     ],
 
                     //content ends here
@@ -433,6 +474,7 @@ module.exports = {
                         icon_url: 'https://i.imgur.com/VvN7PcF.png',
                     },
                 };
+
 
                 await interaction.reply({
                     embeds: [allCommitsEmbed]

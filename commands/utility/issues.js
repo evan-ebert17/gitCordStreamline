@@ -361,7 +361,7 @@ module.exports = {
 
 			const issueNumber = interaction.options.getString('issuenumber')
 
-			//this request returns ONE repositiory of the specified user
+			//this request returns ONE issue of the specified user
 			const octokitPing = await octokit.request(`GET /repos/${username}/${repoName}/issues/${issueNumber}`, {
 				owner: username,
 				repo: repoName,
@@ -377,7 +377,11 @@ module.exports = {
 				//this is just formatted output of:
 				//repo name -> description\n -> language (maybe change this) -> Watchers -> forks -> url
 
-				const allRepoEmbed = {
+				//this is cleaning up the date created with regex
+				const dateTimeString = response.data.created_at;
+				const cleanedDateTimeString = dateTimeString.replace(/T\d{2}:\d{2}:\d{2}Z$/, '')
+
+				const allIssueEmbed = {
 					color: 0x547AA4,
 					title: `**${response.data.title}**`,
 					author: {
@@ -411,7 +415,7 @@ module.exports = {
 						},
 						{
 							name: `**Date Created**`,
-							value: `${response.data.created_at}`
+							value: cleanedDateTimeString
 						},
 
 					],
@@ -424,11 +428,8 @@ module.exports = {
 					},
 				};
 
-				//const repoInfo = 
-				//`**Repository Name**: ${response.data.name}\n**Description**: ${response.data.description}\n\n**Language**: ${response.data.language}\n**Stars**: ${response.data.stargazers_count}\n**Watchers**: ${response.data.watchers_count}\n**Forks**: ${response.data.forks_count}\n**URL**: ${response.data.html_url}`;
-
 				await interaction.reply({
-					embeds: [allRepoEmbed]
+					embeds: [allIssueEmbed]
 				}
 				);
 

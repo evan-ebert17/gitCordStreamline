@@ -118,14 +118,14 @@ module.exports = {
 						const issueGroup = issuesSlice.map(issue => {
 							return {
 								name: `**Issue Name:**`,
-								value: issue.title + ` (**` + issue.state + `**)`
+								value: issue.title + ` (*Issue Number:* #**`+ issue.number +`**, **` + issue.state + `**)`
 							};
 						});
 
 						const issueBodyGroup = issuesSlice.map(issue => {
 							return {
-								name: `**Issue Number:**`,
-								value: issue.number
+								name: `**Issue Description:**`,
+								value: (issue.body === null) ? "No description provided" : `${issue.body}`
 							};
 						});
 

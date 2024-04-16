@@ -57,13 +57,18 @@ module.exports = {
 				.setDescription('Gets a specific issue from a specific repository.')
 
 				.addStringOption(option =>
+					option.setName('username')
+						.setDescription('The GitHub username of the user whose repository we`re looking at.')
+						.setRequired(true))
+
+				.addStringOption(option =>
 					option.setName('repository')
 						.setDescription('The GitHub repository containing the issue we want.')
 						.setRequired(true))
 
 				.addStringOption(option =>
-					option.setName('issuetitle')
-						.setDescription('The name of the issue we want.')
+					option.setName('issuenumber')
+						.setDescription('The number of the issue we want (1, 2, 3 etc).')
 						.setRequired(true))),
 
 	async execute(interaction) {
@@ -113,14 +118,14 @@ module.exports = {
 						const issueGroup = issuesSlice.map(issue => {
 							return {
 								name: `**Issue Name:**`,
-								value: issue.title
+								value: issue.title + ` (**` + issue.state + `**)`
 							};
 						});
 
 						const issueBodyGroup = issuesSlice.map(issue => {
 							return {
-								name: `**Issue Content:**`,
-								value: issue.body
+								name: `**Issue Number:**`,
+								value: issue.number
 							};
 						});
 
@@ -345,6 +350,91 @@ module.exports = {
 				}
 			});
 
+		}
+		//if the user calls the "getspecificrepo" subcommand
+		if (interaction.options.getSubcommand() === 'getspecificissue') {
+
+			//these just hold the user entered values
+			const username = interaction.options.getString('username');
+
+			const repoName = interaction.options.getString('repository');
+
+			const issueNumber = interaction.options.getString('issuenumber')
+
+			//this request returns ONE repositiory of the specified user
+			const octokitPing = await octokit.request(`GET /repos/${username}/${repoName}/issues/${issueNumber}`, {
+				owner: username,
+				repo: repoName,
+				headers: {
+					'X-GitHub-Api-Version': '2022-11-28'
+				}
+			})
+
+			if (octokitPing.status === 200) {
+
+				const response = octokitPing
+
+				//this is just formatted output of:
+				//repo name -> description\n -> language (maybe change this) -> Watchers -> forks -> url
+
+				const allRepoEmbed = {
+					color: 0x547AA4,
+					title: `**${response.data.title}**`,
+					author: {
+						name: 'gitCordStreamline',
+						icon_url: 'https://i.imgur.com/VvN7PcF.png',
+						url: 'https://github.com/evan-ebert17/gitCordStreamline',
+					},
+					thumbnail: {
+						url: `https://i.imgur.com/VvN7PcF.png`,
+					},
+
+					//content starts here
+					fields: [
+						{
+							name: '**URL**',
+							value: `${response.data.html_url}`
+						},
+						{
+							name: '**Status**',
+							value: `${response.data.state}`
+						},
+						{
+							name: `**Description**`,
+							value: (response.data.body === null) ? "No description provided" : `${response.data.body}`
+						},
+
+						//blank space
+						{
+							name: `\u200b`,
+							value: `\u200b`
+						},
+						{
+							name: `**Date Created**`,
+							value: `${response.data.created_at}`
+						},
+
+					],
+
+					//content ends here
+					timestamp: new Date().toISOString(),
+					footer: {
+						text: 'Evan Ebert 2024',
+						icon_url: 'https://i.imgur.com/VvN7PcF.png',
+					},
+				};
+
+				//const repoInfo = 
+				//`**Repository Name**: ${response.data.name}\n**Description**: ${response.data.description}\n\n**Language**: ${response.data.language}\n**Stars**: ${response.data.stargazers_count}\n**Watchers**: ${response.data.watchers_count}\n**Forks**: ${response.data.forks_count}\n**URL**: ${response.data.html_url}`;
+
+				await interaction.reply({
+					embeds: [allRepoEmbed]
+				}
+				);
+
+			} else {
+				console.error("Error fetching repository details:", octokitPing.status)
+			}
 		}
 
 	}

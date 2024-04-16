@@ -74,8 +74,8 @@ module.exports = {
         .addSubcommand(subcommand =>
             subcommand
                 //gets issue of specific name
-                .setName('gitblame')
-                .setDescription('Gets a specific issue from a specific repository.')
+                .setName('getlastcommit')
+                .setDescription('Gets the last commit from a specific repository.')
 
                 .addStringOption(option =>
                     option.setName('username')
@@ -85,11 +85,6 @@ module.exports = {
                 .addStringOption(option =>
                     option.setName('repository')
                         .setDescription('The GitHub repository containing the commit we want.')
-                        .setRequired(true))
-
-                .addStringOption(option =>
-                    option.setName('commitid')
-                        .setDescription('The id of the commit we want.')
                         .setRequired(true))),
 
 
@@ -483,6 +478,114 @@ module.exports = {
 
             } else {
                 console.error("Error fetching repository details:", octokitPing.status)
+            }
+        }
+        if (interaction.options.getSubcommand() === 'getlastcommit') {
+            //these just hold the user entered values
+            const username = interaction.options.getString('username');
+
+            const repoName = interaction.options.getString('repository');
+
+            let lastCommitID;
+
+            //this request returns ONE repositiory of the specified user
+            const getAllCommits = await octokit.paginate(`Get /repos/${username}/${repoName}/commits`, {
+                owner: username,
+            })
+                .then((commits) => {
+
+                    console.log(commits.length)
+
+                    lastCommitID = commits[0].sha
+                })
+
+            const octokitPing = await octokit.request(`GET /repos/${username}/${repoName}/commits/${lastCommitID}`, {
+                owner: username,
+                repo: repoName,
+                ref: lastCommitID,
+                headers: {
+                    'X-GitHub-Api-Version': '2022-11-28'
+                }
+            })
+
+            if (octokitPing.status === 200) {
+
+                const response = octokitPing
+
+                //this is just formatted output of:
+                //repo name -> description\n -> language (maybe change this) -> Watchers -> forks -> url
+
+                //console.log(response.data.files)
+
+                //this array is going to hold all of the issues that we will display
+                let filesData = response.data.files;
+
+                let filesArray = [];
+
+                for (let i = 0; i < filesData.length; i++) {
+                    let strippedFileObject = {
+                        name: `*Changes made to ${filesData[i].filename}*`,
+                        value: `Changes: **` + filesData[i].changes + '**\n' + `Addtions: **` + filesData[i].additions + `, ** Deletions: **` + filesData[i].deletions + `**`
+                    };
+
+                    filesArray.push(strippedFileObject);
+                }
+
+
+
+                const allCommitsEmbed = {
+                    color: 0x547AA4,
+                    title: `**${response.data.author.login}**`,
+                    author: {
+                        name: 'gitCordStreamline',
+                        icon_url: 'https://i.imgur.com/VvN7PcF.png',
+                        url: 'https://github.com/evan-ebert17/gitCordStreamline',
+                    },
+                    thumbnail: {
+                        url: `https://i.imgur.com/VvN7PcF.png`,
+                    },
+
+                    //content starts here
+                    fields: [
+                        {
+                            name: '**URL**',
+                            value: `${response.data.html_url}`
+                        },
+                        {
+                            name: `**Description**`,
+                            value: (response.data.commit.message === null) ? "No message provided" : `${response.data.commit.message}`
+                        },
+                        //filesArray content
+                        ...filesArray,
+
+                        //blank space
+                        {
+                            name: `\u200b`,
+                            value: `\u200b`
+                        },
+
+                        {
+                            name: `**Stats:**`,
+                            value: 'Total: **' + response.data.stats.total + '** Additions: **' + response.data.stats.additions + ', ** Deletions: **' + response.data.stats.deletions + '**'
+                        },
+                        {
+                            name: `**Commit ID:**`,
+                            value: `${response.data.sha}`
+                        },
+                    ],
+
+                    //content ends here
+                    timestamp: new Date().toISOString(),
+                    footer: {
+                        text: 'Evan Ebert 2024',
+                        icon_url: 'https://i.imgur.com/VvN7PcF.png',
+                    },
+                };
+
+
+                await interaction.reply({
+                    embeds: [allCommitsEmbed]
+                })
             }
         }
     }

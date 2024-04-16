@@ -2,14 +2,14 @@ const { SlashCommandBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ActionRow
 
 //module.exports is what we use in node to export data to be "require()"-d in other files.
 
-const {Octokit, App} = require("octokit");
+const { Octokit, App } = require("octokit");
 
 require('dotenv').config()
 
 //creating an octokit instance
 
 const octokit = new Octokit({
-	auth: process.env.OCTOKIT_AUTH
+    auth: process.env.OCTOKIT_AUTH
 })
 
 module.exports = {
@@ -22,301 +22,350 @@ module.exports = {
     //data: provides the command definiton 
     //execute: contain the functionality to run from our event handler when the command is used.
     cooldown: 5,
-	data: new SlashCommandBuilder()
-		.setName('repos')
-		.setDescription('Gets information on repos of the specified GitHub account.')
+    data: new SlashCommandBuilder()
+        .setName('repos')
+        .setDescription('Gets information on repos of the specified GitHub account.')
 
         //subcommands are just branching commands that require different options depending on the subcommand chosen
         //this subcommand gets the username from a user and gets all of the (public) repos associated with that username
         .addSubcommand(subcommand =>
             subcommand
-                    //get repos is the name of one of the subcommands, and is what we'll use to call in the execute block
-                    .setName('getallrepos')
-                    .setDescription('Gets all repos of user whose repos we want.')
-                    
-                    //this specifies the information we're asking from the user, and we added .setRequired to say "you have to put this".
-                    .addStringOption(option => 
-                        option.setName('username')
+                //get repos is the name of one of the subcommands, and is what we'll use to call in the execute block
+                .setName('getallrepos')
+                .setDescription('Gets all repos of user whose repos we want.')
+
+                //this specifies the information we're asking from the user, and we added .setRequired to say "you have to put this".
+                .addStringOption(option =>
+                    option.setName('username')
                         .setDescription('The GitHub username of the user whose repos we want.')
                         .setRequired(true))
 
-                    //this is just a thing asking "hey do you want this private or not".
-                    .addBooleanOption(option =>
-                        option.setName('private')
+                //this is just a thing asking "hey do you want this private or not".
+                .addBooleanOption(option =>
+                    option.setName('private')
                         .setDescription('Whether or not this command should be for your eyes only'))
-                )
+        )
         .addSubcommand(subcommand =>
             subcommand
-                    //gets repo of specific name
-                    .setName('getspecificrepo')
-                    .setDescription('Gets a specific repo from a specific user.')
+                //gets repo of specific name
+                .setName('getspecificrepo')
+                .setDescription('Gets a specific repo from a specific user.')
 
-                    .addStringOption(option =>
-                        option.setName('username')
+                .addStringOption(option =>
+                    option.setName('username')
                         .setDescription('The GitHub username of the user whose repo we want.')
                         .setRequired(true))
-                    
-                    .addStringOption(option => 
-                        option.setName('repository')
+
+                .addStringOption(option =>
+                    option.setName('repository')
                         .setDescription('The name of the repository we want.')
                         .setRequired(true))),
 
-	    async execute(interaction) {
-            //if we have subcommands, we need to set this "CommandInteractionOptionResolver#getSubcommand()" to tell us which subcommand was used.
-		    if (interaction.options.getSubcommand() === 'getallrepos') {
-                // inside a command, event listener, etc.
+    async execute(interaction) {
+        //if we have subcommands, we need to set this "CommandInteractionOptionResolver#getSubcommand()" to tell us which subcommand was used.
+        if (interaction.options.getSubcommand() === 'getallrepos') {
+            // inside a command, event listener, etc.
 
-                const username = interaction.options.getString('username');
+            const username = interaction.options.getString('username');
 
-                const response = await octokit.request(`GET /users/${username}/repos`, {
-                                    username: username,
-                                    headers: {
-                                        'X-Github-Api-Version': '2022-11-28'
-                                    }
-                                })
+            const repository = interaction.options.getString('repository')
 
-                //this is just the num of json objects that get returned from our call.
-                let numOfRepos = response.data.length;
+            //this is so we can get them out of the .then statement
+            let allRepoEmbed;
+            let row;
+            let numOfPages;
+            let avatarPic;
+            //array that will hold an array of objects:
 
-                //because we display 5 items per page, to get our number of pages we just take the total number of items and divide it by amount able to be displayed at once.
-                const howManyPages = (numOfRepos / 5);
-                
-                //array that will hold an array of objects:
+            //[allRepoInfo... [container... {...content in groups of 5 } ] ]
+            //this is the structure of allRepoInfo
+            let allReposInfo;
 
-                //[allRepoInfo... [container... {...content in groups of 5 } ] ]
-                //this is the structure of allRepoInfo
+            const response = await octokit.paginate(`Get /users/${username}/repos`, {
+                owner: username,
+            })
+                .then((repos) => {
 
-                let allRepoInfo = [];
+                    let numOfRepos = repos.length;
 
-                //currently set to 10, this is just using our response object to get all of the repo names and url's 
-                //to be pushed to our allRepoInfo array
-                for (let i = 0; i < numOfRepos; i += 5) {
+                    avatarPic = repos[0].owner.avatar_url;
 
-                    //get the next 5 elements from our data
-                    const reposSlice = response.data.slice(i, i + 5);
+                    //because we display 5 issues per page, to get our total number of pages, we just total / 5.
+                    numOfPages = numOfRepos / 5
+                    if (numOfPages < 1) {
+                        numOfPages = 1;
+                    } else if (numOfPages % 1 != 0) {
+                        numOfPages = Math.ceil(numOfPages)
+                    }
 
-                    // Map each repo to an object
-                    const reposGroup = reposSlice.map(repo => {
-                        return {
-                            name: `**Repository Name:**`,
-                            value: repo.name
-                        };
-                    });
-                
-                    const reposUrlGroup = reposSlice.map(repo => {
-                        return {
-                            name: `**Repository URL:**`,
-                            value: repo.html_url
-                        };
-                    });
-                
-                    // Combine the name and URL objects for each repo
-                    const combinedRepos = reposGroup.map((repo, index) => {
-                        return {
-                            name: reposGroup[index].name,
-                            value: `${reposGroup[index].value}\n${reposUrlGroup[index].name} \n${reposUrlGroup[index].value}`
-                        };
-                    });
+                    //this array is going to hold all of the issues that we will display
+                    allReposInfo = [];
 
-                    // Push the group of 5 into the array
-                    allRepoInfo.push(combinedRepos);
+                    //currently set to 10, this is just using our response object to get all of the repo names and url's 
+                    //to be pushed to our allRepoInfo array
+                    for (let i = 0; i < numOfRepos; i += 5) {
 
-                }
+                        //get the next 5 elements from our data
+                        const reposSlice = repos.slice(i, i + 5);
 
-                //this will be used to keep track of what page of repositories we're on.
-                let currentRepoPage = 0;
+                        // Map each repo to an object
+                        const repoGroup = reposSlice.map(repo => {
+                            return {
+                                name: `**Repo Name:**`,
+                                value: repo.name
+                            };
+                        });
 
-                //this is the embed where our main content resides.
-                //it is in object format currently.
+                        const repoURLGroup = reposSlice.map(repo => {
+                            return {
+                                name: `**Repo URL:**`,
+                                value: repo.html_url
+                            };
+                        });
 
-                const allRepoEmbed = {
-                    color: 0x547AA4, 
-                    title: 'All Public Repositories',
-                    author: {
-                        name: 'gitCordStreamline',
-                        icon_url: 'https://i.imgur.com/VvN7PcF.png',
-                        url: 'https://github.com/evan-ebert17/gitCordStreamline',
-                    },
-                    thumbnail: {
-                        url: `${response.data[0].owner.avatar_url}`,
-                    },
-                    //content starts here
+                        // Combine the name and URL objects for each repo
+                        const combinedRepos = repoGroup.map((repo, index) => {
+                            return {
+                                name: repoGroup[index].name,
+                                value: `${repoGroup[index].value}\n${repoURLGroup[index].name} \n${repoURLGroup[index].value}`
+                            };
+                        });
 
-                    //to update the text content, just increase the index here.
-                    fields: allRepoInfo[currentRepoPage],
+                        // Push the group of 5 into the array
+                        allReposInfo.push(combinedRepos);
 
-                    //content ends here
-                    timestamp: new Date().toISOString(),
-                    footer: {
-                        text: 'Evan Ebert 2024',
-                        icon_url: 'https://i.imgur.com/VvN7PcF.png',
-                    },
-                };
+                    }
 
-                //this button just contains "next" for the main embed, so when we click it we get the 5 next items (if there are any) to the embed
-                const forwardButton = new ButtonBuilder()
-                    .setCustomId('next')
-                    .setLabel('Next Page')
-                    .setStyle(ButtonStyle.Primary)
+                    //this will be used to keep track of what page of repositories we're on.
+                    let currentReposPage = 0;
 
-                //this button just contains "back" for the main embed, so when we click it we get the 5 previous items (if there are any) to the embed
-                const backButton = new ButtonBuilder()
-                    .setCustomId('back')
-                    .setLabel('Previous Page')
-                    .setStyle(ButtonStyle.Secondary)
+                    //this is the embed where our main content resides.
+                    //it is in object format currently.
 
-                //this button keeps track of how many pages of information there are.
-                const whatPage =  new ButtonBuilder()
-                    .setCustomId('whatPage')
-                    .setLabel(`1/${howManyPages}`)
-                    .setStyle(ButtonStyle.Secondary)
-                    .setDisabled(true)
+                    allRepoEmbed = {
+                        color: 0x547AA4,
+                        title: 'All Public Repositories',
+                        author: {
+                            name: 'gitCordStreamline',
+                            icon_url: 'https://i.imgur.com/VvN7PcF.png',
+                            url: 'https://github.com/evan-ebert17/gitCordStreamline',
+                        },
+                        thumbnail: {
+                            url: avatarPic,
+                        },
+                        //content starts here
 
-                //constructor for our row, which will contain our prev, next buttons (in that order).
-                const row = new ActionRowBuilder()
-                    .addComponents(backButton, whatPage, forwardButton)
+                        //to update the text content, just increase the index here.
+                        fields: allReposInfo[currentReposPage],
 
-                //this displays those repo names to the caller
-                const message = await interaction.reply({
-                   
-                   //this produces the embed that will hold our information
-                   embeds: [allRepoEmbed],
-                   //this contains the prev-next buttons.
-                   components: [row]
+                        //content ends here
+                        timestamp: new Date().toISOString(),
+                        footer: {
+                            text: 'Evan Ebert 2024',
+                            icon_url: 'https://i.imgur.com/VvN7PcF.png',
+                        },
+                    };
+
+                    //this button just contains "next" for the main embed, so when we click it we get the 5 next items (if there are any) to the embed
+                    const forwardButton = new ButtonBuilder()
+                        .setCustomId('next')
+                        .setLabel('Next Page')
+                        .setStyle(ButtonStyle.Primary)
+
+                    //this button just contains "back" for the main embed, so when we click it we get the 5 previous items (if there are any) to the embed
+                    const backButton = new ButtonBuilder()
+                        .setCustomId('back')
+                        .setLabel('Previous Page')
+                        .setStyle(ButtonStyle.Secondary)
+
+                    //this button keeps track of how many pages of information there are.
+                    const whatPage = new ButtonBuilder()
+                        .setCustomId('whatPage')
+                        .setLabel(`1/${numOfPages}`)
+                        .setStyle(ButtonStyle.Secondary)
+                        .setDisabled(true)
+
+                    //constructor for our row, which will contain our prev, next buttons (in that order).
+                    row = new ActionRowBuilder()
+                        .addComponents(backButton, whatPage, forwardButton)
                 })
 
-                //a collector is a way for us to collect interactions from the user
-                //used for whenever we have more than 1 interaction we want to keep track of (in this case, pressing prev and back)
-                //we take message, which is our interaction.reply and then we collect every time they press the prev and next button
-                //and accordingly progress or regress the page contents. time is a param here to say "after 5 minutes stop trying to collect interactions".
-                const collector = message.createMessageComponentCollector({ componentType: ComponentType.Button, time: 300000 })
+            //this displays those repo names to the caller
+            const message = await interaction.reply({
 
-                //keep track of current page, starting at 1.
-                let currentButtonPagesLeft = 1;
+                //this produces the embed that will hold our information
+                embeds: [allRepoEmbed],
+                //this contains the prev-next buttons.
+                components: [row]
+            })
 
-                //the i here is shorthand for interacton, or what will be being clicked in our case.
-                collector.on('collect', async i => {
+            //this button just contains "next" for the main embed, so when we click it we get the 5 next items (if there are any) to the embed
+            const forwardButton = new ButtonBuilder()
+                .setCustomId('next')
+                .setLabel('Next Page')
+                .setStyle(ButtonStyle.Primary)
 
-                    //this is to say "hey, we got an interaction! don't throw an error."
-                    i.deferUpdate();
+            //this button just contains "back" for the main embed, so when we click it we get the 5 previous items (if there are any) to the embed
+            const backButton = new ButtonBuilder()
+                .setCustomId('back')
+                .setLabel('Previous Page')
+                .setStyle(ButtonStyle.Secondary)
 
-                    if (i.customId === 'next') {
-                        //increment the representation of what repos will populate the papge for the page we're on
-                        currentRepoPage++;
+            //this button keeps track of how many pages of information there are.
+            const whatPage = new ButtonBuilder()
+                .setCustomId('whatPage')
+                .setLabel(`1/${numOfPages}`)
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(true)
 
-                        //if there are no more items
-                        if(currentRepoPage >= allRepoInfo.length) {
+            //a collector is a way for us to collect interactions from the user
+            //used for whenever we have more than 1 interaction we want to keep track of (in this case, pressing prev and back)
+            //we take message, which is our interaction.reply and then we collect every time they press the prev and next button
+            //and accordingly progress or regress the page contents. time is a param here to say "after 5 minutes stop trying to collect interactions".
+            const collector = message.createMessageComponentCollector({ componentType: ComponentType.Button, time: 300000 })
 
-                            //set value equal to last page in event we go too far
-                            currentRepoPage = allRepoInfo.length - 1; 
-                        }
+            //keep track of current page, starting at 1.
+            let currentButtonPagesLeft = 1;
 
-                        //disabledButton representing how many pages we have left
-                        //in this case, we're incrementing
-                        currentButtonPagesLeft++
 
-                        //if we go too far to the right (ran out of pages)
-                        if(currentButtonPagesLeft > howManyPages) {
-                            //set button text to the max # of repos
-                            currentButtonPagesLeft = howManyPages
-                        }
+            //keeps track of what page we're currently on
+            let currentRepoPage = 0;
 
-                        //this updates the row with the new button text being increased by 1
-                        const updatedRow = new ActionRowBuilder()
-                            .addComponents(backButton, whatPage.setLabel(`${currentButtonPagesLeft}/${howManyPages}`), forwardButton);
+            //the i here is shorthand for interacton, or what will be being clicked in our case.
+            collector.on('collect', async i => {
 
-                        //we edit the message with the updated currentRepoPage++
-                        await message.edit({
-                            embeds: [{
-                                color: 0x547AA4,
-                                title: 'All Public Repositories',
-                                author: {
-                                    name: 'gitCordStreamline',
-                                    icon_url: 'https://i.imgur.com/VvN7PcF.png',
-                                    url: 'https://github.com/evan-ebert17/gitCordStreamline',
-                                },
-                                thumbnail: {
-                                    url: `${response.data[0].owner.avatar_url}`,
-                                },
-                                fields: allRepoInfo[currentRepoPage],
-                                timestamp: new Date().toISOString(),
-                                footer: {
-                                    text: 'Evan Ebert 2024',
-                                    icon_url: 'https://i.imgur.com/VvN7PcF.png',
-                                }
-                            }],
-                            components: [updatedRow]
-                        });
+                //this is to say "hey, we got an interaction! don't throw an error."
+                i.deferUpdate();
 
-                    } else if (i.customId === 'back') {
-                        currentRepoPage--;
+                if (i.customId === 'next') {
+                    //increment the representation of what repos will populate the papge for the page we're on
+                    currentRepoPage++;
 
-                        //if there are no previous items
-                        if(currentRepoPage < 0) {
+                    //if there are no more items
+                    if (currentRepoPage >= numOfPages) {
 
-                            //set value equal to zero in event we go too far
-                            currentRepoPage = 0; 
-                        }
-
-                        //disabledButton representing how many pages we have left
-                        //in this case, we're incrementing
-                        currentButtonPagesLeft--
-
-                        //if we go too far to the left (no previous pages)
-                        if(currentButtonPagesLeft < 1) {
-                            //set button text to the max # of repos
-                            currentButtonPagesLeft = 1
-                        }
-
-                        //this updates the row with the new button text being decreased by 1
-                        const updatedRow = new ActionRowBuilder()
-                            .addComponents(backButton, whatPage.setLabel(`${currentButtonPagesLeft}/${howManyPages}`), forwardButton);
-
-                        //we edit the message with the updated currentRepoPage--
-                        await message.edit({
-                            embeds: [{
-                                color: 0x547AA4,
-                                title: 'All Public Repositories',
-                                author: {
-                                    name: 'gitCordStreamline',
-                                    icon_url: 'https://i.imgur.com/VvN7PcF.png',
-                                    url: 'https://github.com/evan-ebert17/gitCordStreamline',
-                                },
-                                thumbnail: {
-                                    url: `${response.data[0].owner.avatar_url}`,
-                                },
-                                fields: allRepoInfo[currentRepoPage],
-                                timestamp: new Date().toISOString(),
-                                footer: {
-                                    text: 'Evan Ebert 2024',
-                                    icon_url: 'https://i.imgur.com/VvN7PcF.png',
-                                }
-                            }],
-                            components: [updatedRow]
-                        });
+                        //set value equal to last page in event we go too far
+                        currentRepoPage = numOfPages - 1;
                     }
-                });
 
-            }
+                    //disabledButton representing how many pages we have left
+                    //in this case, we're incrementing
+                    currentButtonPagesLeft++
 
-            //if the user calls the "getspecificrepo" subcommand
-            if (interaction.options.getSubcommand() === 'getspecificrepo') {
+                    //if we go too far to the right (ran out of pages)
+                    if (currentButtonPagesLeft > numOfPages) {
+                        //set button text to the max # of repos
+                        currentButtonPagesLeft = numOfPages
+                    }
 
-                //these just hold the user entered values
-                const username = interaction.options.getString('username');
+                    //this updates the row with the new button text being increased by 1
+                    const updatedRow = new ActionRowBuilder()
+                        .addComponents(backButton, whatPage.setLabel(`${currentButtonPagesLeft}/${numOfPages}`), forwardButton);
 
-                const repoName = interaction.options.getString('repository');
+                    //we edit the message with the updated currentRepoPage++
+                    await message.edit({
+                        embeds: [{
+                            color: 0x547AA4,
+                            title: 'All Public Repositories',
+                            author: {
+                                name: 'gitCordStreamline',
+                                icon_url: 'https://i.imgur.com/VvN7PcF.png',
+                                url: 'https://github.com/evan-ebert17/gitCordStreamline',
+                            },
+                            thumbnail: {
+                                url: avatarPic,
+                            },
+                            //content starts here
 
-                //this request returns ONE repositiory of the specified user
-                const octokitPing = await octokit.request(`GET /repos/${username}/${repoName}`, {
-                                    owner: username,
-                                    repo: repoName,
-                                    headers: {
-                                        'X-GitHub-Api-Version': '2022-11-28'
-                                    }
-                                })
+                            //to update the text content, just increase the index here.
+                            fields: allReposInfo[currentRepoPage],
 
-                if (octokitPing.status === 200) {
+                            //content ends here
+                            timestamp: new Date().toISOString(),
+                            footer: {
+                                text: 'Evan Ebert 2024',
+                                icon_url: 'https://i.imgur.com/VvN7PcF.png',
+                            }
+                        }],
+                        components: [updatedRow]
+                    });
+
+                } else if (i.customId === 'back') {
+                    //increment the representation of what repos will populate the papge for the page we're on
+                    currentRepoPage--;
+
+                    //if there are no more items
+                    if (currentRepoPage < 1) {
+
+                        //set value equal to last page in event we go too far
+                        currentRepoPage = 0;
+                    }
+
+                    //disabledButton representing how many pages we have left
+                    //in this case, we're incrementing
+                    currentButtonPagesLeft--;
+
+                    //if we go too far to the right (ran out of pages)
+                    if (currentButtonPagesLeft < 1) {
+                        //set button text to the max # of repos
+                        currentButtonPagesLeft = 1;
+                    }
+
+                    //this updates the row with the new button text being increased by 1
+                    const updatedRow = new ActionRowBuilder()
+                        .addComponents(backButton, whatPage.setLabel(`${currentButtonPagesLeft}/${numOfPages}`), forwardButton);
+
+                    //we edit the message with the updated currentRepoPage--
+                    await message.edit({
+                        embeds: [{
+                            color: 0x547AA4,
+                            title: 'All Public Repositories',
+                            author: {
+                                name: 'gitCordStreamline',
+                                icon_url: 'https://i.imgur.com/VvN7PcF.png',
+                                url: 'https://github.com/evan-ebert17/gitCordStreamline',
+                            },
+                            thumbnail: {
+                                url: avatarPic,
+                            },
+                            //content starts here
+
+                            //to update the text content, just increase the index here.
+                            fields: allReposInfo[currentRepoPage],
+
+                            //content ends here
+                            timestamp: new Date().toISOString(),
+                            footer: {
+                                text: 'Evan Ebert 2024',
+                                icon_url: 'https://i.imgur.com/VvN7PcF.png',
+                            }
+                        }],
+                        components: [updatedRow]
+                    });
+                }
+            });
+
+
+        }
+
+        //if the user calls the "getspecificrepo" subcommand
+        if (interaction.options.getSubcommand() === 'getspecificrepo') {
+
+            //these just hold the user entered values
+            const username = interaction.options.getString('username');
+
+            const repoName = interaction.options.getString('repository');
+
+            //this request returns ONE repositiory of the specified user
+            const octokitPing = await octokit.request(`GET /repos/${username}/${repoName}`, {
+                owner: username,
+                repo: repoName,
+                headers: {
+                    'X-GitHub-Api-Version': '2022-11-28'
+                }
+            })
+
+            if (octokitPing.status === 200) {
 
                 const response = octokitPing
 
@@ -324,7 +373,7 @@ module.exports = {
                 //repo name -> description\n -> language (maybe change this) -> Watchers -> forks -> url
 
                 const allRepoEmbed = {
-                    color: 0x547AA4, 
+                    color: 0x547AA4,
                     title: `**${response.data.name}**`,
                     author: {
                         name: 'gitCordStreamline',
@@ -382,5 +431,5 @@ module.exports = {
             }
         }
 
-	},
+    },
 };

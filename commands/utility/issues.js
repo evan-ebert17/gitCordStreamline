@@ -94,7 +94,7 @@ module.exports = {
 
 					console.log(issues)
 
-					numOfIssues = issues.length;
+					let numOfIssues = issues.length;
 
 					//because we display 5 issues per page, to get our total number of pages, we just total / 5.
 					numOfPages = numOfIssues / 5
@@ -232,6 +232,8 @@ module.exports = {
 
 			//keep track of current page, starting at 1.
 			let currentButtonPagesLeft = 1;
+			//keeps track of what page we're currently on
+			let currentIssuesPage = 0;
 
 			//the i here is shorthand for interacton, or what will be being clicked in our case.
 			collector.on('collect', async i => {
@@ -239,8 +241,6 @@ module.exports = {
 				//this is to say "hey, we got an interaction! don't throw an error."
 				i.deferUpdate();
 
-				//keeps track of what page we're currently on
-				let currentIssuesPage = 0;
 
 				if (i.customId === 'next') {
 					//increment the representation of what repos will populate the papge for the page we're on

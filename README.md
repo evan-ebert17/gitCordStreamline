@@ -30,7 +30,7 @@ To add this discord bot to your server, click this link https://discord.com/oaut
 ## Usage  
 Using slash commands, you can make requests through the Octokit API to any public repository and get information on that repository.
 
-## Planned Addtions
+## Planned-Addtions
 - Adding labels to the issues embed
 - Ability to post issues
 

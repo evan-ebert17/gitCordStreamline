@@ -11,8 +11,7 @@
 [Technologies Used](#technologies-used)  
 [Installation](#installation)  
 [Usage](#usage)  
-[Planned Additions](#planned-additions)
-
+[Planned Additions](#planned-addtions)
 [Credits](#credits)  
 [License](#license)  
 
@@ -31,7 +30,7 @@ To add this discord bot to your server, click this link https://discord.com/oaut
 ## Usage  
 Using slash commands, you can make requests through the Octokit API to any public repository and get information on that repository.
 
-## Planned-Addtions
+## Planned-Additions
 - Adding labels to the issues embed
 - Ability to post issues
 

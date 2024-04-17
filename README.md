@@ -10,8 +10,8 @@
 [Features](#features)  
 [Technologies Used](#technologies-used)  
 [Installation](#installation)  
-[Usage](#usage)
-[Planned Additions](#planned-addtions)
+[Usage](#usage)  
+[Planned Additions](#planned-addtions)  
 [Credits](#credits)  
 [License](#license)  
 

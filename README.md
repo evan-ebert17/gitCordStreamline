@@ -19,7 +19,13 @@
 A Discord bot designed to give you access to GitHub repositories, commits, and issues directly in Discord. Using slash commands, you can make requests through the Octokit API to any public repository and get information on that repository.
 
 ## Features 
-Getting All / One repository from GitHub. Getting All / One Issues from GitHub. Getting All / One / Most recent commits from GitHub.
+- /repos getallrepos, provide the username of the user you want to get all of their (public) repositories for
+- /repos specifcallrepos, provide the username and repository name to get detailed information on the given (public) repository.
+- /repos getallissues, provide the username and repository name to get all issues for that (public) repository.
+- /repos getspecificissue, provide the username, repository name and issue number to get detailed information on the given issue.
+- /repos getallcommits, provide the username and repository name to get all commits for that (public) repository.
+- /repos getspecificcommit, provide the username, repository name and sha ID (produced in getallcommits!) to get detailed information on the given commit.
+- /repos getlastcommit, provide the username and repository name detailed information on the most recent commit.
 
 ## Technologies-Used  
 This bot was made using Discord.js, Octokit (GitHub's API which provides information from GitHub repositories) and dotenv.

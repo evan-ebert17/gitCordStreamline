@@ -3,7 +3,7 @@
 [Github](https://github.com/evan-ebert17/gitCordStreamline)
 
 ## Screen Shots
-![gitCordStreamline](assets/getspecificcommit_command.PNG)
+![gitCordStreamline](assets/getspecificcommit%20command.PNG)
 
 ##### Table of Contents  
 [Purpose](#purpose)  

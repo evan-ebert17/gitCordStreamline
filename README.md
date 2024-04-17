@@ -12,6 +12,7 @@
 [Installation](#installation)  
 [Usage](#usage)  
 [Planned Additions](#planned-additions)
+
 [Credits](#credits)  
 [License](#license)  
 
